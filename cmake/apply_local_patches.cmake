@@ -15,20 +15,38 @@ if(NOT S2_PATCH_FILES)
 endif()
 
 foreach(_patch IN LISTS S2_PATCH_FILES)
+if(WIN32)
     execute_process(
-        COMMAND "${S2_PATCH_EXECUTABLE}" --batch --dry-run --forward -p1 -i "${_patch}"
+        COMMAND "${S2_PATCH_EXECUTABLE}" apply --stat -p1 -i "${_patch}"
         WORKING_DIRECTORY "${S2_PATCH_ROOT}"
         RESULT_VARIABLE _can_apply
         OUTPUT_QUIET
         ERROR_QUIET
     )
+else()
+    execute_process(
+		COMMAND "${S2_PATCH_EXECUTABLE}" --batch --dry-run --forward -p1 -i "${_patch}"
+        WORKING_DIRECTORY "${S2_PATCH_ROOT}"
+        RESULT_VARIABLE _can_apply
+        OUTPUT_QUIET
+        ERROR_QUIET
+    )
+endif()
 
     if(_can_apply EQUAL 0)
+if(WIN32)
+        execute_process(
+			COMMAND "${S2_PATCH_EXECUTABLE}" apply -p1 "${_patch}"
+            WORKING_DIRECTORY "${S2_PATCH_ROOT}"
+            RESULT_VARIABLE _apply_result
+        )
+else()
         execute_process(
             COMMAND "${S2_PATCH_EXECUTABLE}" --batch --forward -p1 -i "${_patch}"
             WORKING_DIRECTORY "${S2_PATCH_ROOT}"
             RESULT_VARIABLE _apply_result
         )
+endif()
         if(NOT _apply_result EQUAL 0)
             message(FATAL_ERROR "Failed to apply local patch: ${_patch}")
         endif()
@@ -36,13 +54,23 @@ foreach(_patch IN LISTS S2_PATCH_FILES)
         continue()
     endif()
 
+if(WIN32)
     execute_process(
-        COMMAND "${S2_PATCH_EXECUTABLE}" --batch --dry-run -R -p1 -i "${_patch}"
+		COMMAND "${S2_PATCH_EXECUTABLE}" apply --stat -R -p1 "${_patch}"
         WORKING_DIRECTORY "${S2_PATCH_ROOT}"
         RESULT_VARIABLE _already_applied
-        OUTPUT_QUIET
-        ERROR_QUIET
+        #OUTPUT_QUIET
+        #ERROR_QUIET
     )
+else()
+    execute_process(
+		COMMAND "${S2_PATCH_EXECUTABLE}" --batch --dry-run -R -p1 -i "${_patch}"
+        WORKING_DIRECTORY "${S2_PATCH_ROOT}"
+        RESULT_VARIABLE _already_applied
+        #OUTPUT_QUIET
+        #ERROR_QUIET
+    )
+endif()
 
     if(_already_applied EQUAL 0)
         message(STATUS "Local patch already applied: ${_patch}")
